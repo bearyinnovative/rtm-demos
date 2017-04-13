@@ -1,0 +1,46 @@
+#!/usr/bin/env ruby
+
+require 'open-uri'
+require 'net/http'
+require 'json'
+
+input = ARGV[0]
+
+url = "http://api.giphy.com/v1/gifs/search?q=#{URI::encode(input)}&api_key=dc6zaTOxFJmzC"
+uri = URI(url)
+response = Net::HTTP.get(uri)
+
+result = JSON.parse(response)
+data = result["data"]
+image = data[Random.rand(0...data.length)]["images"]["original"]
+url = image["url"]
+width = image["width"].to_i
+height = image["height"].to_i
+
+uri = URI("https://rtm.bearychat.com/message?token=#{ENV['rtmToken']}")
+https = Net::HTTP.new(uri.hostname, uri.port)
+https.use_ssl = true
+req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
+
+req.body = {
+	vchannel: "#{ENV['vchannel']}", 
+	text: "#{input}",
+	attachments: [
+		{
+			images: [
+				{
+					url: "#{url}",
+					width: width,
+					height: height,
+				}
+			]
+		}
+	]
+}.to_json
+res = https.request(req)
+# puts res.body
+
+# puts url
+# puts width
+# puts height
+

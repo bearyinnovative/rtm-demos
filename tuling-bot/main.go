@@ -13,10 +13,6 @@ import (
 )
 
 const (
-	RTM_API_BASE = "https://rtm.bearychat.com"
-)
-
-const (
 	CODE_TEXT = 100000
 	CODE_LINK = 200000
 	CODE_NEWS = 302000

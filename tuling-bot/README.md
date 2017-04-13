@@ -1,7 +1,7 @@
 效果: ![](./screenshots/tuling-demo.png)
 
 用法: 
-* `go get -u -v github.com/bcho/bearychat.go`
+* `go get -u -v github.com/bearyinnovative/bearychat-go`
 * `go get -u -v github.com/bitly/go-simplejson`
 * `go run main.go --rtmToken RTM_TOKEN_HERE --tulingToken TULING_TOKEN_HERE`
 
