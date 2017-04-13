@@ -7,10 +7,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
-	"time"
 
-	bc "github.com/bcho/bearychat.go"
+	bc "github.com/bearyinnovative/bearychat-go"
 	"github.com/bitly/go-simplejson"
 )
 
@@ -46,44 +44,23 @@ func main() {
 		return
 	}
 
-	rtmClient, err := bc.NewRTMClient(
-		rtmToken,
-		bc.WithRTMAPIBase(RTM_API_BASE),
-	)
+	context, err := bc.NewRTMContext(rtmToken)
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 
-	user, wsHost, err := rtmClient.Start()
+	err, messageC, errC := context.Run()
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	log.Printf("rtm connected as %s\n", user.Name)
-
-	rtmLoop, err := bc.NewRTMLoop(wsHost)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := rtmLoop.Start(); err != nil {
-		log.Fatal(err)
-	}
-	defer rtmLoop.Stop()
-
-	go rtmLoop.Keepalive(time.NewTicker(10 * time.Second))
-
-	errC := rtmLoop.ErrC()
-	messageC, err := rtmLoop.ReadC()
-	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
 	for {
 		select {
 		case err := <-errC:
 			log.Printf("rtm loop error: %+v", err)
-			if err := rtmLoop.Stop(); err != nil {
+			if err := context.Loop.Stop(); err != nil {
 				log.Fatal(err)
 			}
 			return
@@ -94,7 +71,7 @@ func main() {
 			}
 
 			// ignore self message
-			if message.IsFromMe(*user) {
+			if message.IsFromUID(context.UID()) {
 				continue
 			}
 
@@ -109,8 +86,8 @@ func main() {
 			if !ok {
 				continue
 			}
-			text := parseTextContent(user, message)
-			if text == "" {
+			mentioned, text := message.ParseMentionUID(context.UID())
+			if !mentioned {
 				continue
 			}
 			reply, err := replyContent(uid, text)
@@ -119,32 +96,11 @@ func main() {
 				continue
 			}
 
-			if err := rtmLoop.Send(message.Refer(reply)); err != nil {
+			if err := context.Loop.Send(message.Refer(reply)); err != nil {
 				log.Fatal(err)
 			}
 		}
 	}
-}
-
-func parseTextContent(user *bc.User, message bc.RTMMessage) string {
-	if !message.IsChatMessage() {
-		return "NOT SUPPORT"
-	}
-
-	mt := message.Type()
-	text, ok := message["text"].(string)
-	if !ok {
-		return ""
-	}
-	if mt == bc.RTMMessageTypeChannelMessage {
-		var isAtMe bool
-		isAtMe, text = parseAtUserAtBeginning(user, text)
-		if !isAtMe {
-			return ""
-		}
-	}
-
-	return text
 }
 
 func replyContent(uid, content string) (reply string, err error) {
@@ -201,21 +157,6 @@ func replyContent(uid, content string) (reply string, err error) {
 	default:
 		return
 	}
-}
-
-func parseAtUserAtBeginning(user *bc.User, text string) (bool, string) {
-	r, _ := regexp.Compile("@<=(.*)=>")
-	loc := r.FindStringIndex(text)
-
-	if len(loc) != 2 {
-		return false, text
-	}
-
-	if text[loc[0]+3:loc[1]-2] == user.Id {
-		return true, text[loc[1]+1:]
-	}
-
-	return false, text
 }
 
 func checkErr(err error) bool {
