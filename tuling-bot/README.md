@@ -1,4 +1,5 @@
-效果: ![](./screenshots/tuling-demo.png)
+效果:  
+![](./screenshots/tuling-demo.png)
 
 用法: 
 * `go get -u -v github.com/bearyinnovative/bearychat-go`
